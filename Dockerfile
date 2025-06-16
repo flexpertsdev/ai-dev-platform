@@ -1,31 +1,48 @@
-FROM node:18-alpine
+FROM node:18-bullseye
 
+# Install Docker for DevContainer management
+RUN apt-get update && apt-get install -y \
+    docker.io \
+    git \
+    curl \
+    python3 \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install DevPod CLI
+RUN curl -L -o /usr/local/bin/devpod \
+    "https://github.com/loft-sh/devpod/releases/latest/download/devpod-linux-amd64" \
+    && chmod +x /usr/local/bin/devpod
+
+# Install Claude Code CLI
+RUN npm install -g @anthropic-ai/claude-code
+
+# Create app directory
 WORKDIR /app
 
-# Copy and build everything
-COPY . .
+# Copy all application code first
+COPY backend/ ./backend/
+COPY frontend/ ./frontend/
+COPY ai-workspace-template/ ./ai-workspace-template/
 
-# Install backend deps
+# Install backend dependencies
 WORKDIR /app/backend
 RUN npm install
 
-# Install and build frontend
+# Install frontend dependencies and build
 WORKDIR /app/frontend
 RUN npm install && npm run build
 
-# Create simple server
 WORKDIR /app
-RUN echo 'const express = require("express");\n\
-const path = require("path");\n\
-const app = express();\n\
-app.use(express.static(path.join(__dirname, "frontend/build")));\n\
-app.get("/health", (req, res) => res.json({status: "ok"}));\n\
-app.get("*", (req, res) => {\n\
-  res.sendFile(path.join(__dirname, "frontend/build", "index.html"));\n\
-});\n\
-const PORT = process.env.PORT || 3000;\n\
-app.listen(PORT, () => console.log(`Server on port ${PORT}`));' > simple-server.js
 
-EXPOSE 3000
+# Create workspace for user containers
+RUN mkdir -p /workspace/containers
 
-CMD ["node", "simple-server.js"]
+# Expose ports
+EXPOSE 3000 3001 8080
+
+# Start script
+COPY start-poc.sh ./
+RUN chmod +x start-poc.sh
+
+CMD ["./start-poc.sh"]

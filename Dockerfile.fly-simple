@@ -1,0 +1,67 @@
+FROM node:18-alpine
+
+# Install essential tools
+RUN apk add --no-cache \
+    docker \
+    docker-cli \
+    docker-compose \
+    git \
+    curl \
+    bash \
+    python3 \
+    py3-pip \
+    openrc
+
+# Configure Docker
+RUN rc-update add docker boot
+
+# Install DevPod
+RUN curl -L -o /usr/local/bin/devpod \
+    "https://github.com/loft-sh/devpod/releases/latest/download/devpod-linux-amd64" \
+    && chmod +x /usr/local/bin/devpod
+
+# Create app directory
+WORKDIR /app
+
+# Copy package files first for better caching
+COPY backend/package*.json ./backend/
+COPY frontend/package*.json ./frontend/
+
+# Install dependencies
+WORKDIR /app/backend
+RUN npm install
+
+WORKDIR /app/frontend
+RUN npm install
+
+# Copy application code
+WORKDIR /app
+COPY . .
+
+# Build frontend
+WORKDIR /app/frontend
+RUN npm run build
+
+WORKDIR /app
+
+# Create startup script
+RUN echo '#!/bin/bash\n\
+# Start Docker service\n\
+dockerd --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 &\n\
+sleep 10\n\
+\n\
+# Configure DevPod\n\
+devpod provider add docker || true\n\
+devpod provider use docker\n\
+\n\
+# Start backend\n\
+cd /app/backend && npm start &\n\
+\n\
+# Serve frontend\n\
+cd /app && npx serve -s frontend/build -l 3000 &\n\
+\n\
+wait' > start.sh && chmod +x start.sh
+
+EXPOSE 3000 3001 8080
+
+CMD ["./start.sh"]

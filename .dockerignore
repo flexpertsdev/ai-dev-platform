@@ -7,7 +7,13 @@ node_modules
 build
 dist
 .railway
-deploy-success.md
-DEPLOYMENT_STATUS.md
-IMPORTANT_DEPLOYMENT_UPDATE.md
-FINAL_DEPLOYMENT_INSTRUCTIONS.md
+*.md
+frontend/node_modules
+backend/node_modules
+frontend/build
+.fly
+fly.toml
+Dockerfile*
+.dockerignore
+*.sh
+digitalocean-backup

@@ -1,0 +1,37 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Just copy what we need
+COPY backend/package*.json ./backend/
+COPY frontend/package*.json ./frontend/
+
+# Install deps
+RUN cd backend && npm install
+RUN cd frontend && npm install
+
+# Copy source
+COPY backend ./backend
+COPY frontend/src ./frontend/src
+COPY frontend/public ./frontend/public
+COPY frontend/tsconfig.json ./frontend/
+
+# Build frontend
+RUN cd frontend && npm run build
+
+# Simple start without Docker
+RUN echo '#!/bin/sh\n\
+echo "Starting simplified version (no DevContainers on Fly.io)"\n\
+cd backend && node -e "\
+const express = require(\"express\");\
+const path = require(\"path\");\
+const app = express();\
+app.use(express.static(path.join(__dirname, \"../frontend/build\")));\
+app.get(\"/health\", (req, res) => res.json({status: \"ok\", message: \"Chat UI is running!\"}));\
+app.get(\"*\", (req, res) => res.sendFile(path.join(__dirname, \"../frontend/build/index.html\")));\
+app.listen(3000, () => console.log(\"Server on port 3000\"));\
+"' > start.sh && chmod +x start.sh
+
+EXPOSE 3000
+
+CMD ["./start.sh"]
