@@ -1,21 +1,11 @@
 FROM node:18-bullseye
 
-# Install Docker for DevContainer management
+# Install basic dependencies
 RUN apt-get update && apt-get install -y \
-    docker.io \
     git \
     curl \
     python3 \
-    python3-pip \
     && rm -rf /var/lib/apt/lists/*
-
-# Install DevPod CLI
-RUN curl -L -o /usr/local/bin/devpod \
-    "https://github.com/loft-sh/devpod/releases/latest/download/devpod-linux-amd64" \
-    && chmod +x /usr/local/bin/devpod
-
-# Install Claude Code CLI
-RUN npm install -g @anthropic-ai/claude-code
 
 # Create app directory
 WORKDIR /app
@@ -41,8 +31,10 @@ RUN mkdir -p /workspace/containers
 # Expose ports
 EXPOSE 3000 3001 8080
 
-# Start script
-COPY start-poc.sh ./
-RUN chmod +x start-poc.sh
+# Copy both start scripts
+COPY start-railway.sh ./
+COPY railway-server.js ./backend/
+RUN chmod +x start-railway.sh
 
-CMD ["./start-poc.sh"]
+# Use Railway-specific start script
+CMD ["./start-railway.sh"]
