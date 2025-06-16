@@ -1,0 +1,11 @@
+[build]
+  builder = "DOCKERFILE"
+
+[deploy]
+  restartPolicyType = "ON_FAILURE"
+  healthcheckPath = "/health"
+  healthcheckTimeout = 300
+  
+[experimental]
+  enableVolumeMounts = true
+  dockerHost = "unix:///var/run/docker.sock"
