@@ -1,0 +1,87 @@
+FROM docker:24-dind
+
+# Install Node.js and system dependencies
+RUN apk add --no-cache \
+    nodejs \
+    npm \
+    git \
+    curl \
+    bash \
+    python3 \
+    py3-pip \
+    supervisor
+
+# Install DevPod
+RUN curl -L -o /usr/local/bin/devpod \
+    "https://github.com/loft-sh/devpod/releases/latest/download/devpod-linux-amd64" \
+    && chmod +x /usr/local/bin/devpod
+
+# Install Claude Code CLI
+RUN npm install -g @anthropic-ai/claude-code
+
+# Create app directory
+WORKDIR /app
+
+# Copy application code
+COPY backend/ ./backend/
+COPY frontend/ ./frontend/
+COPY ai-workspace-template/ ./ai-workspace-template/
+
+# Install backend dependencies
+WORKDIR /app/backend
+RUN npm install
+
+# Install frontend dependencies and build
+WORKDIR /app/frontend
+RUN npm install && npm run build
+
+WORKDIR /app
+
+# Create supervisor config
+RUN mkdir -p /etc/supervisor/conf.d
+COPY <<EOF /etc/supervisor/conf.d/supervisord.conf
+[supervisord]
+nodaemon=true
+
+[program:docker]
+command=/usr/local/bin/dockerd-entrypoint.sh
+autostart=true
+autorestart=true
+stderr_logfile=/var/log/docker.err.log
+stdout_logfile=/var/log/docker.out.log
+
+[program:app]
+command=/app/start-fly.sh
+autostart=true
+autorestart=true
+startsecs=30
+stderr_logfile=/var/log/app.err.log
+stdout_logfile=/var/log/app.out.log
+EOF
+
+# Create startup script
+RUN echo '#!/bin/bash\n\
+# Wait for Docker to be ready\n\
+while ! docker info >/dev/null 2>&1; do\n\
+    echo "Waiting for Docker daemon..."\n\
+    sleep 2\n\
+done\n\
+echo "Docker is ready!"\n\
+\n\
+# Configure DevPod\n\
+devpod provider add docker || true\n\
+devpod provider use docker\n\
+\n\
+# Start backend API\n\
+cd /app/backend && npm start &\n\
+\n\
+# Serve frontend\n\
+cd /app && npx serve -s frontend/build -l 3000 &\n\
+\n\
+wait' > /app/start-fly.sh && chmod +x /app/start-fly.sh
+
+# Expose ports
+EXPOSE 3000 3001 8080 2375
+
+# Start supervisor
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

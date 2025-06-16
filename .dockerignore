@@ -1,0 +1,13 @@
+node_modules
+.git
+.env
+.env.local
+*.log
+.DS_Store
+build
+dist
+.railway
+deploy-success.md
+DEPLOYMENT_STATUS.md
+IMPORTANT_DEPLOYMENT_UPDATE.md
+FINAL_DEPLOYMENT_INSTRUCTIONS.md
