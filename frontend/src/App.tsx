@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 
-const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:3001';
-const WS_BASE = process.env.REACT_APP_WS_BASE || 'ws://localhost:8080';
+// Use window.location to dynamically determine API URLs
+const API_BASE = process.env.REACT_APP_API_BASE || `http://${window.location.hostname}:3001`;
+const WS_BASE = process.env.REACT_APP_WS_BASE || `ws://${window.location.hostname}:8080`;
 
 interface Message {
   id: string;
