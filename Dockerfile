@@ -1,40 +1,31 @@
-FROM node:18-bullseye
+FROM node:18-alpine
 
-# Install basic dependencies
-RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    python3 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create app directory
 WORKDIR /app
 
-# Copy all application code first
-COPY backend/ ./backend/
-COPY frontend/ ./frontend/
-COPY ai-workspace-template/ ./ai-workspace-template/
+# Copy and build everything
+COPY . .
 
-# Install backend dependencies
+# Install backend deps
 WORKDIR /app/backend
 RUN npm install
 
-# Install frontend dependencies and build
+# Install and build frontend
 WORKDIR /app/frontend
 RUN npm install && npm run build
 
+# Create simple server
 WORKDIR /app
+RUN echo 'const express = require("express");\n\
+const path = require("path");\n\
+const app = express();\n\
+app.use(express.static(path.join(__dirname, "frontend/build")));\n\
+app.get("/health", (req, res) => res.json({status: "ok"}));\n\
+app.get("*", (req, res) => {\n\
+  res.sendFile(path.join(__dirname, "frontend/build", "index.html"));\n\
+});\n\
+const PORT = process.env.PORT || 3000;\n\
+app.listen(PORT, () => console.log(`Server on port ${PORT}`));' > simple-server.js
 
-# Create workspace for user containers
-RUN mkdir -p /workspace/containers
+EXPOSE 3000
 
-# Expose ports
-EXPOSE 3000 3001 8080
-
-# Copy both start scripts
-COPY start-railway.sh ./
-COPY railway-server.js ./backend/
-RUN chmod +x start-railway.sh
-
-# Use Railway-specific start script
-CMD ["./start-railway.sh"]
+CMD ["node", "simple-server.js"]
