@@ -31,7 +31,9 @@ RUN npm install
 
 # Install frontend dependencies and build
 WORKDIR /app/frontend
-RUN npm install && npm run build
+ARG REACT_APP_API_BASE
+ARG REACT_APP_WS_BASE
+RUN npm install && REACT_APP_API_BASE=$REACT_APP_API_BASE REACT_APP_WS_BASE=$REACT_APP_WS_BASE npm run build
 
 WORKDIR /app
 

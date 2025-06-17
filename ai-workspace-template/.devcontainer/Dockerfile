@@ -40,8 +40,12 @@ RUN git config --global user.name "AI Workspace Assistant" \
     && git config --global user.email "ai@workspace.dev" \
     && git config --global init.defaultBranch main
 
-# Create workspace helper scripts directory
-RUN mkdir -p /workspace/.devcontainer
+# Create workspace helper scripts
+COPY setup.sh /workspace/.devcontainer/
+COPY auto-sync.sh /workspace/.devcontainer/
+COPY claude-handler.py /workspace/.devcontainer/
+
+RUN chmod +x /workspace/.devcontainer/*.sh
 
 WORKDIR /workspace
 
